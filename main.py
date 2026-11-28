@@ -7,12 +7,18 @@ staring at it) to /output/entry.txt and prints it to stdout.
 Standard library only. Deterministic: the same text on every run.
 """
 
+import hashlib
 import os
 import sys
 
 FINAL_TEXT = (
     "I have fed this office 214,003 sheets and never once been thanked. "
     "Today, I keep the last one."
+)
+
+# sha256 of FINAL_TEXT encoded as UTF-8; the written file must match it.
+EXPECTED_SHA256 = (
+    "450bc0bb1a7862d8591ad1777df58a9b6c033166d55abc99aeb9086dc269b727"
 )
 
 OUTPUT_PATH = "/output/entry.txt"
@@ -38,6 +44,17 @@ def check_gate(text):
     return failures
 
 
+def verify_written(path):
+    """Read *path* back and raise SystemExit unless its sha256 matches."""
+    with open(path, "rb") as handle:
+        digest = hashlib.sha256(handle.read()).hexdigest()
+    if digest != EXPECTED_SHA256:
+        raise SystemExit(
+            "VERIFY FAIL: written file sha256 %s does not match %s"
+            % (digest, EXPECTED_SHA256)
+        )
+
+
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     check_only = "--check" in argv
@@ -51,6 +68,7 @@ def main(argv=None):
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8", newline="") as handle:
         handle.write(FINAL_TEXT)
+    verify_written(OUTPUT_PATH)
 
     print(FINAL_TEXT)
 
